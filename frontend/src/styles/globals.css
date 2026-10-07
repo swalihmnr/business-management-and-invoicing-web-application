@@ -15,6 +15,7 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
@@ -40,24 +41,35 @@ p {
 }
 
 a {
-  color: var(--primary-400);
+  color: var(--primary-500);
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
 a:hover {
-  color: var(--primary-300);
-}
-
-button, input, select, textarea {
-  font: inherit;
-  color: inherit;
+  color: var(--primary-600);
 }
 
 button {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+/* Base Form Inputs */
+input, select, textarea {
+  font: inherit;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
 /* Custom Scrollbars */
@@ -71,7 +83,7 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-elevated);
+  background: var(--bg-card-hover);
   border-radius: var(--radius-full);
 }
 

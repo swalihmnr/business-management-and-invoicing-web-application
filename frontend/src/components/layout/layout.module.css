@@ -101,7 +101,7 @@
 /* TopBar */
 .topbar {
   height: var(--topbar-height);
-  background-color: rgba(17, 24, 39, 0.85);
+  background-color: var(--topbar-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;

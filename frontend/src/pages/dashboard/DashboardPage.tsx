@@ -79,7 +79,7 @@ export const DashboardPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Today's Sales</span>
-              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: '#fff' }}>₹0.00</h2>
+              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--text-primary)' }}>₹0.00</h2>
             </div>
             <div
               style={{
@@ -126,7 +126,7 @@ export const DashboardPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Customers</span>
-              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: '#fff' }}>0</h2>
+              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--text-primary)' }}>0</h2>
             </div>
             <div
               style={{
