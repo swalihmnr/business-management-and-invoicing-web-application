@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
-import { useInvoiceStore, type PaymentMethod } from '../../store/invoice.store';
+import { Button } from '../../components/ui/Button';
+import { useInvoiceStore, type InvoiceRecord } from '../../store/invoice.store';
+import { RecordPaymentModal } from '../../components/invoices/RecordPaymentModal';
+import { toast } from 'sonner';
 import {
   CreditCard,
   DollarSign,
@@ -9,6 +12,7 @@ import {
   Receipt,
   Calendar,
   Search,
+  Plus,
 } from 'lucide-react';
 
 export const PaymentsPage: React.FC = () => {
@@ -17,12 +21,14 @@ export const PaymentsPage: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<string>('ALL');
+  const [paymentModalInvoice, setPaymentModalInvoice] = useState<InvoiceRecord | null>(null);
 
   // Aggregated KPIs
   const totalCollected = allPayments.reduce((sum, p) => sum + p.amount, 0);
   const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
   const paidCount = invoices.filter((inv) => inv.status === 'PAID').length;
-  const pendingCount = invoices.filter((inv) => inv.status !== 'PAID').length;
+  const pendingInvoices = invoices.filter((inv) => (inv.amountDue || 0) > 0);
+  const pendingCount = pendingInvoices.length;
 
   const filteredPayments = allPayments.filter((p) => {
     const matchesSearch =
@@ -35,12 +41,30 @@ export const PaymentsPage: React.FC = () => {
     return matchesSearch && matchesMethod;
   });
 
+  const handleRecordPaymentClick = () => {
+    if (pendingInvoices.length === 0) {
+      toast.info('All invoices are fully paid! No outstanding balances.');
+      return;
+    }
+    // Open payment modal for the first pending invoice
+    setPaymentModalInvoice(pendingInvoices[0]);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Header */}
-      <div>
-        <h1>Payment Management</h1>
-        <p>Real-time cash flow, customer collections, payment receipts, and outstanding dues</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1>Payment Management & Tracking</h1>
+          <p>Real-time cash flow, customer collections, payment receipts, and outstanding dues</p>
+        </div>
+        <Button
+          variant="primary"
+          icon={<Plus size={16} />}
+          onClick={handleRecordPaymentClick}
+        >
+          Record Payment
+        </Button>
       </div>
 
       {/* Financial Health KPIs */}
@@ -119,14 +143,14 @@ export const PaymentsPage: React.FC = () => {
             </div>
           </div>
           <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            100% cleared transactions
+            100% settled transactions
           </div>
         </Card>
 
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pending Follow-ups</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Pending Settlement</span>
               <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--danger)' }}>
                 {pendingCount}
               </h2>
@@ -148,22 +172,88 @@ export const PaymentsPage: React.FC = () => {
         </Card>
       </div>
 
+      {/* Pending Invoices Awaiting Settlement */}
+      {pendingInvoices.length > 0 && (
+        <Card title={`Pending Invoices Awaiting Settlement (${pendingInvoices.length})`}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '750px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  <th style={{ padding: '0.85rem 0.75rem' }}>Invoice #</th>
+                  <th style={{ padding: '0.85rem 0.75rem' }}>Customer</th>
+                  <th style={{ padding: '0.85rem 0.75rem' }}>Due Date</th>
+                  <th style={{ padding: '0.85rem 0.75rem', textAlign: 'right' }}>Total (₹)</th>
+                  <th style={{ padding: '0.85rem 0.75rem', textAlign: 'right' }}>Amount Due (₹)</th>
+                  <th style={{ padding: '0.85rem 0.75rem' }}>Status</th>
+                  <th style={{ padding: '0.85rem 0.75rem', textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingInvoices.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <td style={{ padding: '0.85rem 0.75rem', fontWeight: 600, color: 'var(--primary-500)' }}>
+                      {inv.invoiceNumber}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.75rem', fontWeight: 500 }}>
+                      {inv.customerName}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      {inv.dueDate}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'right', fontWeight: 500 }}>
+                      ₹{inv.totalAmount.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'right', fontWeight: 700, color: 'var(--warning)' }}>
+                      ₹{inv.amountDue.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.75rem' }}>
+                      <Badge variant={inv.status === 'PARTIALLY_PAID' ? 'warning' : 'danger'}>
+                        {inv.status.replace('_', ' ')}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'right' }}>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        icon={<CreditCard size={14} />}
+                        onClick={() => setPaymentModalInvoice(inv)}
+                      >
+                        Record Payment
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
       {/* Payment Ledger Section */}
       <Card
         title="Recorded Payments Ledger"
         action={
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Search */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search
+                size={14}
+                color="var(--text-muted)"
+                style={{ position: 'absolute', left: '0.6rem', pointerEvents: 'none' }}
+              />
               <input
                 type="text"
                 placeholder="Search invoice or client..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
-                  padding: '0.45rem 0.8rem',
+                  padding: '0.45rem 0.8rem 0.45rem 2rem',
                   fontSize: '0.85rem',
-                  width: '200px',
+                  width: '210px',
+                  background: 'var(--bg-app)',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--text-primary)',
                 }}
               />
             </div>
@@ -175,6 +265,10 @@ export const PaymentsPage: React.FC = () => {
               style={{
                 padding: '0.45rem 0.75rem',
                 fontSize: '0.85rem',
+                background: 'var(--bg-app)',
+                border: '1px solid var(--border-medium)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-primary)',
               }}
             >
               <option value="ALL">All Payment Methods</option>
@@ -192,7 +286,7 @@ export const PaymentsPage: React.FC = () => {
             <CreditCard size={48} color="var(--text-muted)" style={{ marginBottom: '1rem' }} />
             <h3>No payment records found</h3>
             <p style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-              Record payments against invoices on the Invoices page to view the ledger history here.
+              Record payments against invoices on this page or the Invoices page to view the ledger history here.
             </p>
           </div>
         ) : (
@@ -243,6 +337,13 @@ export const PaymentsPage: React.FC = () => {
           </div>
         )}
       </Card>
+
+      {/* Record Payment Modal */}
+      <RecordPaymentModal
+        invoice={paymentModalInvoice}
+        isOpen={!!paymentModalInvoice}
+        onClose={() => setPaymentModalInvoice(null)}
+      />
     </div>
   );
 };

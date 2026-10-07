@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ReceiptText, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuthStore } from '../../store/auth.store';
 
 export const RegisterPage: React.FC = () => {
@@ -15,6 +16,7 @@ export const RegisterPage: React.FC = () => {
       { id: 'demo-user-id', name: 'Demo Administrator', email: 'admin@bizinvoice.local' },
       'demo-jwt-token'
     );
+    toast.success('Registration successful! Welcome to BizInvoice.');
     navigate('/dashboard');
   };
 

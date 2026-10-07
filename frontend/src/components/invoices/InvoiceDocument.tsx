@@ -1,6 +1,6 @@
 import React from 'react';
 import type { InvoiceRecord } from '../../store/invoice.store';
-import { Printer, Truck, Building2, CheckCircle2, CreditCard } from 'lucide-react';
+import { Printer, Truck, Building2, CreditCard } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 

@@ -94,10 +94,20 @@ export const ProductsPage: React.FC = () => {
   };
 
   const handleDeleteProduct = (p: ProductItem) => {
-    if (confirm(`Are you sure you want to delete "${p.name}"?`)) {
-      deleteProduct(p.id);
-      toast.info(`Product "${p.name}" removed`);
-    }
+    toast(`Delete "${p.name}"?`, {
+      description: 'This item will be removed from your product catalog.',
+      action: {
+        label: 'Delete',
+        onClick: () => {
+          deleteProduct(p.id);
+          toast.success(`Product "${p.name}" removed successfully`);
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   return (

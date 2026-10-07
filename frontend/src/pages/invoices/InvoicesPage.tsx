@@ -26,10 +26,20 @@ export const InvoicesPage: React.FC = () => {
   const [paymentInvoice, setPaymentInvoice] = useState<InvoiceRecord | null>(null);
 
   const handleDelete = (id: string, invoiceNumber: string) => {
-    if (confirm(`Are you sure you want to delete ${invoiceNumber}?`)) {
-      deleteInvoice(id);
-      toast.info(`Invoice ${invoiceNumber} deleted`);
-    }
+    toast(`Delete invoice ${invoiceNumber}?`, {
+      description: 'This invoice and its payment records will be removed.',
+      action: {
+        label: 'Delete',
+        onClick: () => {
+          deleteInvoice(id);
+          toast.success(`Invoice ${invoiceNumber} deleted successfully`);
+        },
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {},
+      },
+    });
   };
 
   return (

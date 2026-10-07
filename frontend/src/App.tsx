@@ -14,6 +14,7 @@ import { SettingsPage } from './pages/settings/SettingsPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { useAuthStore } from './store/auth.store';
+import { useThemeStore } from './store/theme.store';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,9 +35,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }
 };
 
 export const App: React.FC = () => {
+  const theme = useThemeStore((s) => s.theme);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster richColors position="top-right" theme="dark" />
+      <Toaster richColors position="top-right" theme={theme} closeButton />
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}

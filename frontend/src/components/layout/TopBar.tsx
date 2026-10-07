@@ -1,5 +1,5 @@
-import React from 'react';
 import { Menu, User as UserIcon, LogOut, Sun, Moon } from 'lucide-react';
+import { toast } from 'sonner';
 import { useUIStore } from '../../store/ui.store';
 import { useAuthStore } from '../../store/auth.store';
 import { useThemeStore } from '../../store/theme.store';
@@ -71,7 +71,10 @@ export const TopBar: React.FC = () => {
 
         {/* Sign Out Button */}
         <button
-          onClick={logout}
+          onClick={() => {
+            logout();
+            toast.info('Signed out successfully');
+          }}
           title="Sign out"
           style={{
             padding: '0.5rem',

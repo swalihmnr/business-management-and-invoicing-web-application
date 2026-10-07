@@ -12,6 +12,16 @@
   user-select: none;
 }
 
+.buttonSm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.buttonLg {
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+}
+
 .buttonPrimary {
   background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
   color: #fff;
