@@ -1,17 +1,26 @@
+import React from 'react';
 import type { InvoiceRecord } from '../../store/invoice.store';
-import { Printer, Truck, Building2 } from 'lucide-react';
+import { Printer, Truck, Building2, CheckCircle2, CreditCard } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 
 interface InvoiceDocumentProps {
   invoice: InvoiceRecord;
   onClose?: () => void;
+  onRecordPayment?: () => void;
 }
 
-export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice, onClose }) => {
+export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({
+  invoice,
+  onClose,
+  onRecordPayment,
+}) => {
   const handlePrint = () => {
     window.print();
   };
+
+  const isPaid = invoice.status === 'PAID';
+  const isPartial = invoice.status === 'PARTIALLY_PAID';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -22,12 +31,14 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice, onClo
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
           paddingBottom: '1rem',
           borderBottom: '1px solid var(--border-subtle)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Badge variant={invoice.status === 'PAID' ? 'success' : 'warning'}>
+          <Badge variant={isPaid ? 'success' : isPartial ? 'warning' : 'info'}>
             {invoice.status}
           </Badge>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
@@ -36,6 +47,11 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice, onClo
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
+          {!isPaid && onRecordPayment && (
+            <Button variant="primary" icon={<CreditCard size={16} />} onClick={onRecordPayment}>
+              Record Payment
+            </Button>
+          )}
           <Button variant="secondary" icon={<Printer size={16} />} onClick={handlePrint}>
             Print / Save PDF
           </Button>
@@ -244,7 +260,7 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice, onClo
           {/* Notes */}
           <div style={{ flex: 1, minWidth: '260px' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Notes & Payment Instructions
+              Notes & Terms
             </span>
             <p
               style={{
@@ -256,6 +272,38 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice, onClo
             >
               {invoice.notes || 'Payment is requested to be deposited into the specified corporate account.'}
             </p>
+
+            {/* Payment History Log on Document */}
+            {invoice.payments && invoice.payments.length > 0 && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Recorded Payment Receipts
+                </span>
+                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {invoice.payments.map((p) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: '0.8rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>
+                        {p.paymentDate} • <strong>{p.paymentMethod}</strong> {p.referenceNumber ? `(${p.referenceNumber})` : ''}
+                      </span>
+                      <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                        +₹{p.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Financial Breakdown */}
@@ -313,9 +361,38 @@ export const InvoiceDocument: React.FC<InvoiceDocumentProps> = ({ invoice, onClo
                 alignItems: 'baseline',
               }}
             >
-              <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>Total Due:</span>
-              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--primary-500)' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 600 }}>Invoice Total:</span>
+              <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>
                 ₹{invoice.totalAmount.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Payment Summary */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Amount Paid:</span>
+              <span style={{ fontWeight: 600, color: 'var(--success)' }}>
+                ₹{(invoice.amountPaid || 0).toFixed(2)}
+              </span>
+            </div>
+
+            <div
+              style={{
+                paddingTop: '0.5rem',
+                borderTop: '1px dashed var(--border-subtle)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+              }}
+            >
+              <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>Balance Due:</span>
+              <span
+                style={{
+                  fontSize: '1.35rem',
+                  fontWeight: 800,
+                  color: invoice.amountDue <= 0 ? 'var(--success)' : 'var(--warning)',
+                }}
+              >
+                ₹{(invoice.amountDue || 0).toFixed(2)}
               </span>
             </div>
           </div>

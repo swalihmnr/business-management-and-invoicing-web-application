@@ -7,17 +7,29 @@ import {
   Plus,
   ArrowUpRight,
   Server,
+  CreditCard,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { apiClient } from '../../api/axios';
+import { useInvoiceStore } from '../../store/invoice.store';
+import { useProductStore } from '../../store/product.store';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { invoices } = useInvoiceStore();
+  const { products } = useProductStore();
+
   const [healthStatus, setHealthStatus] = useState<string>('Checking...');
   const [dbStatus] = useState<string>('PostgreSQL 17 (Port 5433)');
+
+  // Dynamic Metrics
+  const totalSales = invoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+  const outstandingBalance = invoices.reduce((sum, inv) => sum + (inv.amountDue || 0), 0);
+  const unpaidInvoices = invoices.filter((inv) => inv.status !== 'PAID').length;
+  const lowStockCount = products.filter((p) => p.stock <= (p.lowStockThreshold || 10)).length;
 
   useEffect(() => {
     apiClient
@@ -75,11 +87,14 @@ export const DashboardPage: React.FC = () => {
           gap: '1.25rem',
         }}
       >
+        {/* Total Invoiced Sales */}
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Today's Sales</span>
-              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--text-primary)' }}>₹0.00</h2>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Total Invoiced Sales</span>
+              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--text-primary)' }}>
+                ₹{totalSales.toFixed(2)}
+              </h2>
             </div>
             <div
               style={{
@@ -94,77 +109,98 @@ export const DashboardPage: React.FC = () => {
           </div>
           <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
             <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center' }}>
-              <ArrowUpRight size={14} /> 0%
+              <ArrowUpRight size={14} /> Active
             </span>
-            <span style={{ color: 'var(--text-muted)' }}>vs yesterday</span>
+            <span style={{ color: 'var(--text-muted)' }}>from {invoices.length} invoices</span>
           </div>
         </Card>
 
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Outstanding Balance</span>
-              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--warning)' }}>₹0.00</h2>
+        {/* Outstanding Receivables */}
+        <div style={{ cursor: 'pointer' }} onClick={() => navigate('/payments')}>
+          <Card>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Outstanding Balance</span>
+                <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--warning)' }}>
+                  ₹{outstandingBalance.toFixed(2)}
+                </h2>
+              </div>
+              <div
+                style={{
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  color: 'var(--warning)',
+                  padding: '0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <CreditCard size={22} />
+              </div>
             </div>
-            <div
-              style={{
-                background: 'rgba(245, 158, 11, 0.12)',
-                color: 'var(--warning)',
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-md)',
-              }}
-            >
-              <Receipt size={22} />
+            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--primary-500)', fontWeight: 500 }}>
+              {unpaidInvoices} unpaid / partial invoices • View Payments →
             </div>
-          </div>
-          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            0 unpaid invoices
-          </div>
-        </Card>
+          </Card>
+        </div>
 
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Active Customers</span>
-              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--text-primary)' }}>0</h2>
+        {/* Active Products */}
+        <div style={{ cursor: 'pointer' }} onClick={() => navigate('/products')}>
+          <Card>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Catalog Items</span>
+                <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--text-primary)' }}>
+                  {products.length}
+                </h2>
+              </div>
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: 'var(--success)',
+                  padding: '0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <Users size={22} />
+              </div>
             </div>
-            <div
-              style={{
-                background: 'rgba(16, 185, 129, 0.12)',
-                color: 'var(--success)',
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-md)',
-              }}
-            >
-              <Users size={22} />
+            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Managed products & SKUs
             </div>
-          </div>
-          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Ready for invoicing
-          </div>
-        </Card>
+          </Card>
+        </div>
 
-        <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Low-Stock Warnings</span>
-              <h2 style={{ fontSize: '1.75rem', marginTop: '0.35rem', color: 'var(--danger)' }}>0</h2>
+        {/* Low Stock Warnings */}
+        <div style={{ cursor: 'pointer' }} onClick={() => navigate('/products')}>
+          <Card>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Low-Stock Warnings</span>
+                <h2
+                  style={{
+                    fontSize: '1.75rem',
+                    marginTop: '0.35rem',
+                    color: lowStockCount > 0 ? 'var(--danger)' : 'var(--success)',
+                  }}
+                >
+                  {lowStockCount}
+                </h2>
+              </div>
+              <div
+                style={{
+                  background: lowStockCount > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                  color: lowStockCount > 0 ? 'var(--danger)' : 'var(--success)',
+                  padding: '0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <AlertTriangle size={22} />
+              </div>
             </div>
-            <div
-              style={{
-                background: 'rgba(239, 68, 68, 0.12)',
-                color: 'var(--danger)',
-                padding: '0.5rem',
-                borderRadius: 'var(--radius-md)',
-              }}
-            >
-              <AlertTriangle size={22} />
+            <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Items at or below reorder threshold
             </div>
-          </div>
-          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Items at or below reorder threshold
-          </div>
-        </Card>
+          </Card>
+        </div>
       </div>
 
       {/* System Infrastructure Status Banner */}

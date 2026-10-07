@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { InvoiceDocument } from '../../components/invoices/InvoiceDocument';
+import { RecordPaymentModal } from '../../components/invoices/RecordPaymentModal';
 import { useInvoiceStore, type InvoiceRecord } from '../../store/invoice.store';
 import {
   Plus,
@@ -13,13 +14,16 @@ import {
   Trash2,
   Calendar,
   Truck,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const InvoicesPage: React.FC = () => {
   const navigate = useNavigate();
   const { invoices, deleteInvoice } = useInvoiceStore();
+
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
+  const [paymentInvoice, setPaymentInvoice] = useState<InvoiceRecord | null>(null);
 
   const handleDelete = (id: string, invoiceNumber: string) => {
     if (confirm(`Are you sure you want to delete ${invoiceNumber}?`)) {
@@ -64,7 +68,7 @@ export const InvoicesPage: React.FC = () => {
       ) : (
         <Card>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   <th style={{ padding: '0.85rem 0.75rem' }}>Invoice #</th>
@@ -73,6 +77,7 @@ export const InvoicesPage: React.FC = () => {
                   <th style={{ padding: '0.85rem 0.75rem' }}>Date</th>
                   <th style={{ padding: '0.85rem 0.75rem' }}>Status</th>
                   <th style={{ padding: '0.85rem 0.75rem', textAlign: 'right' }}>Total (₹)</th>
+                  <th style={{ padding: '0.85rem 0.75rem', textAlign: 'right' }}>Balance Due (₹)</th>
                   <th style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
@@ -114,15 +119,48 @@ export const InvoicesPage: React.FC = () => {
                       </div>
                     </td>
                     <td style={{ padding: '0.85rem 0.75rem' }}>
-                      <Badge variant={inv.status === 'PAID' ? 'success' : 'warning'}>
+                      <Badge
+                        variant={
+                          inv.status === 'PAID'
+                            ? 'success'
+                            : inv.status === 'PARTIALLY_PAID'
+                            ? 'warning'
+                            : 'info'
+                        }
+                      >
                         {inv.status}
                       </Badge>
                     </td>
-                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'right', fontWeight: 700, fontSize: '1rem' }}>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'right', fontWeight: 600 }}>
                       ₹{inv.totalAmount.toFixed(2)}
                     </td>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'right', fontWeight: 700 }}>
+                      <span style={{ color: (inv.amountDue || 0) <= 0 ? 'var(--success)' : 'var(--warning)' }}>
+                        ₹{(inv.amountDue || 0).toFixed(2)}
+                      </span>
+                    </td>
                     <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                        {/* Record Payment Button */}
+                        {inv.status !== 'PAID' && (
+                          <button
+                            onClick={() => setPaymentInvoice(inv)}
+                            title="Record Payment"
+                            style={{
+                              padding: '0.45rem',
+                              borderRadius: 'var(--radius-sm)',
+                              backgroundColor: 'var(--bg-card)',
+                              border: '1px solid var(--border-subtle)',
+                              color: 'var(--success)',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <CreditCard size={15} />
+                          </button>
+                        )}
+
+                        {/* View / Print Button */}
                         <button
                           onClick={() => setSelectedInvoice(inv)}
                           title="View / Print Tax Invoice"
@@ -136,8 +174,10 @@ export const InvoicesPage: React.FC = () => {
                             alignItems: 'center',
                           }}
                         >
-                          <Eye size={16} />
+                          <Eye size={15} />
                         </button>
+
+                        {/* Delete Button */}
                         <button
                           onClick={() => handleDelete(inv.id, inv.invoiceNumber)}
                           title="Delete Invoice"
@@ -151,7 +191,7 @@ export const InvoicesPage: React.FC = () => {
                             alignItems: 'center',
                           }}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </td>
@@ -174,8 +214,22 @@ export const InvoicesPage: React.FC = () => {
           <InvoiceDocument
             invoice={selectedInvoice}
             onClose={() => setSelectedInvoice(null)}
+            onRecordPayment={() => {
+              const current = selectedInvoice;
+              setSelectedInvoice(null);
+              setPaymentInvoice(current);
+            }}
           />
         </Modal>
+      )}
+
+      {/* Record Payment Modal */}
+      {paymentInvoice && (
+        <RecordPaymentModal
+          invoice={paymentInvoice}
+          isOpen={!!paymentInvoice}
+          onClose={() => setPaymentInvoice(null)}
+        />
       )}
     </div>
   );

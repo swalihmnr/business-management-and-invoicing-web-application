@@ -6,6 +6,7 @@ import {
   Package,
   Boxes,
   Receipt,
+  CreditCard,
   Settings,
   ReceiptText,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { label: 'Invoices', path: '/invoices', icon: Receipt },
+  { label: 'Payments', path: '/payments', icon: CreditCard },
   { label: 'Customers', path: '/customers', icon: Users },
   { label: 'Products', path: '/products', icon: Package },
   { label: 'Inventory', path: '/inventory', icon: Boxes },
