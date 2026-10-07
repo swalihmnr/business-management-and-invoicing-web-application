@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { errorHandler } from './middleware/error.middleware';
 import { ApiError } from './utils/ApiError';
 import { ApiResponse } from './utils/ApiResponse';
+import reportsRouter from './modules/reports/reports.routes';
 
 export const app = express();
 
@@ -39,6 +40,9 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
     })
   );
 });
+
+// Reports API Module
+app.use('/api/v1/reports', reportsRouter);
 
 // Handle 404 for unknown endpoints
 app.use((req: Request, _res: Response, next) => {

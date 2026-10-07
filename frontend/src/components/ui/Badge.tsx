@@ -2,7 +2,7 @@ import React from 'react';
 import styles from './ui.module.css';
 
 interface BadgeProps {
-  variant?: 'success' | 'warning' | 'danger' | 'info';
+  variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary';
   children: React.ReactNode;
 }
 

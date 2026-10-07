@@ -11,6 +11,15 @@ import { CustomersPage } from './pages/customers/CustomersPage';
 import { ProductsPage } from './pages/products/ProductsPage';
 import { InventoryPage } from './pages/inventory/InventoryPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
+import { ReportsLayout } from './pages/reports/ReportsLayout';
+import { SalesReport } from './pages/reports/SalesReport';
+import { ProfitReport } from './pages/reports/ProfitReport';
+import { ProductsReport } from './pages/reports/ProductsReport';
+import { CategoriesReport } from './pages/reports/CategoriesReport';
+import { CustomerReport } from './pages/reports/CustomerReport';
+import { ReceivablesReport } from './pages/reports/ReceivablesReport';
+import { PaymentReport } from './pages/reports/PaymentReport';
+import { InventoryReport } from './pages/reports/InventoryReport';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { useAuthStore } from './store/auth.store';
@@ -63,6 +72,20 @@ export const App: React.FC = () => {
             <Route path="customers" element={<CustomersPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="inventory" element={<InventoryPage />} />
+
+            {/* Reports Module */}
+            <Route path="reports" element={<ReportsLayout />}>
+              <Route index element={<Navigate to="sales" replace />} />
+              <Route path="sales" element={<SalesReport />} />
+              <Route path="profit" element={<ProfitReport />} />
+              <Route path="products" element={<ProductsReport />} />
+              <Route path="categories" element={<CategoriesReport />} />
+              <Route path="customers" element={<CustomerReport />} />
+              <Route path="receivables" element={<ReceivablesReport />} />
+              <Route path="payments" element={<PaymentReport />} />
+              <Route path="inventory" element={<InventoryReport />} />
+            </Route>
+
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

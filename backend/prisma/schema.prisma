@@ -254,11 +254,12 @@ model InvoiceItem {
   productId    String? @map("product_id")  // Nullable — product may be soft-deleted
 
   // ---- HISTORICAL SNAPSHOTS (immutable after creation) ----
-  productName  String  @map("product_name")   // Product name at time of sale
-  productSku   String  @map("product_sku")    // SKU at time of sale
-  unitPrice    Decimal @map("unit_price")     @db.Decimal(12, 2)  // Selling price at time of sale
-  taxRate      Decimal @map("tax_rate")       @db.Decimal(5, 2)   // Tax rate at time of sale
-  unit         String  @default("pcs")
+  productName          String  @map("product_name")            // Product name at time of sale
+  productSku           String  @map("product_sku")             // SKU at time of sale
+  unitPrice            Decimal @map("unit_price")              @db.Decimal(12, 2)  // Selling price at time of sale
+  purchaseCostSnapshot Decimal @default(0) @map("purchase_cost_snapshot") @db.Decimal(12, 2)  // Cost/purchase price at time of sale (for profit reports). DEFAULT 0 = cost unknown for historical records.
+  taxRate              Decimal @map("tax_rate")                @db.Decimal(5, 2)   // Tax rate at time of sale
+  unit                 String  @default("pcs")
 
   // ---- PER-LINE INPUTS ----
   quantity       Int
