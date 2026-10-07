@@ -8,12 +8,14 @@ import {
   ArrowUpRight,
   Server,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { apiClient } from '../../api/axios';
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [healthStatus, setHealthStatus] = useState<string>('Checking...');
   const [dbStatus] = useState<string>('PostgreSQL 17 (Port 5433)');
 
@@ -48,10 +50,18 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <Button variant="secondary" icon={<Plus size={16} />}>
+          <Button
+            variant="secondary"
+            icon={<Plus size={16} />}
+            onClick={() => navigate('/customers')}
+          >
             New Customer
           </Button>
-          <Button variant="primary" icon={<Plus size={16} />}>
+          <Button
+            variant="primary"
+            icon={<Plus size={16} />}
+            onClick={() => navigate('/invoices/new')}
+          >
             Create Invoice
           </Button>
         </div>

@@ -1,8 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { CheckCircle2, Building2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const SettingsPage: React.FC = () => {
+  const [businessName, setBusinessName] = useState('My Commercial Business');
+  const [taxNumber, setTaxNumber] = useState('22AAAAA0000A1Z5');
+  const [invoicePrefix, setInvoicePrefix] = useState('INV');
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.success('Business settings saved successfully!', {
+      description: `Prefix: ${invoicePrefix} • Business: ${businessName}`,
+      icon: <CheckCircle2 size={18} color="var(--success)" />,
+    });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '800px' }}>
       <div>
@@ -11,12 +25,14 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <Card title="Business Profile">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Business Name</label>
             <input
               type="text"
-              defaultValue="My Commercial Business"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              required
               style={{
                 width: '100%',
                 marginTop: '0.35rem',
@@ -34,6 +50,8 @@ export const SettingsPage: React.FC = () => {
               <input
                 type="text"
                 placeholder="22AAAAA0000A1Z5"
+                value={taxNumber}
+                onChange={(e) => setTaxNumber(e.target.value)}
                 style={{
                   width: '100%',
                   marginTop: '0.35rem',
@@ -48,7 +66,9 @@ export const SettingsPage: React.FC = () => {
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Invoice Prefix</label>
               <input
                 type="text"
-                defaultValue="INV"
+                value={invoicePrefix}
+                onChange={(e) => setInvoicePrefix(e.target.value)}
+                required
                 style={{
                   width: '100%',
                   marginTop: '0.35rem',
@@ -62,9 +82,11 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <div style={{ marginTop: '0.5rem' }}>
-            <Button variant="primary">Save Changes</Button>
+            <Button type="submit" variant="primary" icon={<Building2 size={16} />}>
+              Save Changes
+            </Button>
           </div>
-        </div>
+        </form>
       </Card>
     </div>
   );

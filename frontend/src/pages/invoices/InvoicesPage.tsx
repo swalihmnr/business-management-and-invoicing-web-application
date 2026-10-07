@@ -1,9 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Plus, Receipt } from 'lucide-react';
 
 export const InvoicesPage: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -11,7 +14,11 @@ export const InvoicesPage: React.FC = () => {
           <h1>Invoices</h1>
           <p>Create and manage sales invoices, record customer payments</p>
         </div>
-        <Button variant="primary" icon={<Plus size={16} />}>
+        <Button
+          variant="primary"
+          icon={<Plus size={16} />}
+          onClick={() => navigate('/invoices/new')}
+        >
           New Invoice
         </Button>
       </div>
@@ -23,7 +30,11 @@ export const InvoicesPage: React.FC = () => {
           <p style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
             Invoices generated will appear here with instant PDF export and payment tracking.
           </p>
-          <Button variant="secondary" icon={<Plus size={16} />}>
+          <Button
+            variant="secondary"
+            icon={<Plus size={16} />}
+            onClick={() => navigate('/invoices/new')}
+          >
             Create your first invoice
           </Button>
         </div>
