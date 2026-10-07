@@ -3,84 +3,114 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
-import { Plus, Package, CheckCircle2 } from 'lucide-react';
+import { useProductStore, type ProductItem } from '../../store/product.store';
+import { Plus, Package, CheckCircle2, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface ProductItem {
-  id: string;
-  name: string;
-  sku: string;
-  sellingPrice: number;
-  stock: number;
-  taxRate: number;
-  unit: string;
-}
-
 export const ProductsPage: React.FC = () => {
+  const { products, addProduct, updateProduct, deleteProduct } = useProductStore();
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [products, setProducts] = useState<ProductItem[]>([
-    {
-      id: '1',
-      name: 'Wireless Bluetooth Headset',
-      sku: 'SKU-HEADSET-01',
-      sellingPrice: 1200,
-      stock: 45,
-      taxRate: 18,
-      unit: 'pcs',
-    },
-    {
-      id: '2',
-      name: 'USB-C Fast Charging Cable',
-      sku: 'SKU-CABLE-02',
-      sellingPrice: 350,
-      stock: 8,
-      taxRate: 18,
-      unit: 'pcs',
-    },
-  ]);
+  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
 
   // Form states
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
-  const [sellingPrice, setSellingPrice] = useState(0);
-  const [stock, setStock] = useState(10);
-  const [taxRate, setTaxRate] = useState(18);
-  const [unit, setUnit] = useState('pcs');
+  const [sellingPrice, setSellingPrice] = useState<number>(0);
+  const [purchasePrice, setPurchasePrice] = useState<number>(0);
+  const [stock, setStock] = useState<number>(10);
+  const [taxRate, setTaxRate] = useState<number>(18);
+  const [unit, setUnit] = useState<string>('pcs');
+  const [category, setCategory] = useState<string>('General');
 
-  const handleCreateProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newProduct: ProductItem = {
-      id: String(Date.now()),
-      name,
-      sku: sku || `SKU-${Date.now().toString().slice(-4)}`,
-      sellingPrice,
-      stock,
-      taxRate,
-      unit,
-    };
-    setProducts([...products, newProduct]);
-    setModalOpen(false);
+  // Open modal for creating a new product
+  const handleOpenCreateModal = () => {
+    setEditingProduct(null);
     setName('');
-    setSku('');
+    setSku(`SKU-${Date.now().toString().slice(-4)}`);
     setSellingPrice(0);
+    setPurchasePrice(0);
     setStock(10);
-    toast.success('Product created successfully!', {
-      description: `${name} has been added to your catalog.`,
-      icon: <CheckCircle2 size={18} color="var(--success)" />,
-    });
+    setTaxRate(18);
+    setUnit('pcs');
+    setCategory('General');
+    setModalOpen(true);
+  };
+
+  // Open modal for editing an existing product
+  const handleOpenEditModal = (p: ProductItem) => {
+    setEditingProduct(p);
+    setName(p.name);
+    setSku(p.sku);
+    setSellingPrice(p.sellingPrice);
+    setPurchasePrice(p.purchasePrice || 0);
+    setStock(p.stock);
+    setTaxRate(p.taxRate);
+    setUnit(p.unit);
+    setCategory(p.category || 'General');
+    setModalOpen(true);
+  };
+
+  const handleSaveProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (editingProduct) {
+      // Update existing product
+      updateProduct(editingProduct.id, {
+        name,
+        sku,
+        sellingPrice,
+        purchasePrice,
+        stock,
+        taxRate,
+        unit,
+        category,
+      });
+
+      toast.success('Product updated successfully!', {
+        description: `${name} has been updated.`,
+        icon: <CheckCircle2 size={18} color="var(--success)" />,
+      });
+    } else {
+      // Create new product
+      addProduct({
+        name,
+        sku: sku || `SKU-${Date.now().toString().slice(-4)}`,
+        sellingPrice,
+        purchasePrice,
+        stock,
+        taxRate,
+        unit,
+        category,
+      });
+
+      toast.success('Product created successfully!', {
+        description: `${name} has been added to your catalog.`,
+        icon: <CheckCircle2 size={18} color="var(--success)" />,
+      });
+    }
+
+    setModalOpen(false);
+  };
+
+  const handleDeleteProduct = (p: ProductItem) => {
+    if (confirm(`Are you sure you want to delete "${p.name}"?`)) {
+      deleteProduct(p.id);
+      toast.info(`Product "${p.name}" removed`);
+    }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1>Products & Services</h1>
-          <p>Product catalog, SKUs, pricing tiers, and tax rates</p>
+          <p>Product catalog, SKUs, pricing tiers, and stock management</p>
         </div>
         <Button
           variant="primary"
           icon={<Plus size={16} />}
-          onClick={() => setModalOpen(true)}
+          onClick={handleOpenCreateModal}
         >
           Add Product
         </Button>
@@ -97,7 +127,7 @@ export const ProductsPage: React.FC = () => {
             <Button
               variant="secondary"
               icon={<Plus size={16} />}
-              onClick={() => setModalOpen(true)}
+              onClick={handleOpenCreateModal}
             >
               Create Product
             </Button>
@@ -106,15 +136,17 @@ export const ProductsPage: React.FC = () => {
       ) : (
         <Card>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Product Name</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>SKU</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Price (₹)</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>Tax Rate</th>
-                  <th style={{ padding: '0.75rem 0.5rem' }}>In Stock</th>
-                  <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>Status</th>
+                  <th style={{ padding: '0.85rem 0.5rem' }}>Product Name</th>
+                  <th style={{ padding: '0.85rem 0.5rem' }}>SKU</th>
+                  <th style={{ padding: '0.85rem 0.5rem' }}>Category</th>
+                  <th style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>Price (₹)</th>
+                  <th style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>GST</th>
+                  <th style={{ padding: '0.85rem 0.5rem' }}>Stock</th>
+                  <th style={{ padding: '0.85rem 0.5rem' }}>Status</th>
+                  <th style={{ padding: '0.85rem 0.5rem', textAlign: 'center' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,17 +156,61 @@ export const ProductsPage: React.FC = () => {
                     <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
                       {p.sku}
                     </td>
-                    <td style={{ padding: '0.85rem 0.5rem', fontWeight: 600 }}>₹{p.sellingPrice.toFixed(2)}</td>
-                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-muted)' }}>{p.taxRate}% GST</td>
+                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      {p.category || 'General'}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.5rem', fontWeight: 600, textAlign: 'right' }}>
+                      ₹{p.sellingPrice.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-muted)', textAlign: 'right' }}>
+                      {p.taxRate}%
+                    </td>
                     <td style={{ padding: '0.85rem 0.5rem' }}>
                       <span style={{ fontWeight: 600 }}>{p.stock}</span> {p.unit}
                     </td>
-                    <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right' }}>
-                      {p.stock <= 10 ? (
+                    <td style={{ padding: '0.85rem 0.5rem' }}>
+                      {p.stock <= (p.lowStockThreshold || 10) ? (
                         <Badge variant="warning">Low Stock</Badge>
                       ) : (
                         <Badge variant="success">In Stock</Badge>
                       )}
+                    </td>
+                    <td style={{ padding: '0.85rem 0.5rem', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => handleOpenEditModal(p)}
+                          title="Edit Product"
+                          style={{
+                            padding: '0.45rem',
+                            borderRadius: 'var(--radius-sm)',
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--primary-500)',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Edit2 size={15} />
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDeleteProduct(p)}
+                          title="Delete Product"
+                          style={{
+                            padding: '0.45rem',
+                            borderRadius: 'var(--radius-sm)',
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--danger)',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -144,9 +220,13 @@ export const ProductsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Add Product Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Create New Product">
-        <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Add / Edit Product Modal */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingProduct ? `Edit Product — ${editingProduct.name}` : 'Create New Product'}
+      >
+        <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div>
             <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Product Name *</label>
             <input
@@ -159,18 +239,16 @@ export const ProductsPage: React.FC = () => {
                 width: '100%',
                 marginTop: '0.35rem',
                 padding: '0.65rem 0.8rem',
-                background: 'var(--bg-app)',
-                border: '1px solid var(--border-medium)',
-                borderRadius: 'var(--radius-md)',
               }}
             />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>SKU Code</label>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>SKU Code *</label>
               <input
                 type="text"
+                required
                 placeholder="SKU-CHAIR-01"
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
@@ -178,13 +256,27 @@ export const ProductsPage: React.FC = () => {
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.8rem',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
                 }}
               />
             </div>
 
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Category</label>
+              <input
+                type="text"
+                placeholder="e.g. Electronics, Furniture"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                style={{
+                  width: '100%',
+                  marginTop: '0.35rem',
+                  padding: '0.65rem 0.8rem',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Selling Price (₹) *</label>
               <input
@@ -198,9 +290,22 @@ export const ProductsPage: React.FC = () => {
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.8rem',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Purchase / Cost Price (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
+                style={{
+                  width: '100%',
+                  marginTop: '0.35rem',
+                  padding: '0.65rem 0.8rem',
                 }}
               />
             </div>
@@ -208,7 +313,7 @@ export const ProductsPage: React.FC = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Initial Stock</label>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Stock Quantity</label>
               <input
                 type="number"
                 min="0"
@@ -218,9 +323,6 @@ export const ProductsPage: React.FC = () => {
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.8rem',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
                 }}
               />
             </div>
@@ -234,20 +336,19 @@ export const ProductsPage: React.FC = () => {
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.8rem',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
                 }}
               >
                 <option value="pcs">pcs</option>
                 <option value="box">box</option>
                 <option value="kg">kg</option>
                 <option value="ltr">ltr</option>
+                <option value="meter">meter</option>
+                <option value="set">set</option>
               </select>
             </div>
 
             <div>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Tax Rate</label>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>GST Tax Rate</label>
               <select
                 value={taxRate}
                 onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
@@ -255,9 +356,6 @@ export const ProductsPage: React.FC = () => {
                   width: '100%',
                   marginTop: '0.35rem',
                   padding: '0.65rem 0.8rem',
-                  background: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-md)',
                 }}
               >
                 <option value="0">0%</option>
@@ -274,7 +372,7 @@ export const ProductsPage: React.FC = () => {
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Save Product
+              {editingProduct ? 'Save Changes' : 'Create Product'}
             </Button>
           </div>
         </form>
