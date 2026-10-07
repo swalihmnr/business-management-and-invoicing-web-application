@@ -1,0 +1,12 @@
+{
+  "name": "bizinvoice-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "db:start": "/usr/lib/postgresql/17/bin/pg_ctl -D .local_db -l .local_db/logfile.log start",
+    "db:stop": "/usr/lib/postgresql/17/bin/pg_ctl -D .local_db stop",
+    "db:status": "/usr/lib/postgresql/17/bin/pg_ctl -D .local_db status",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  }
+}

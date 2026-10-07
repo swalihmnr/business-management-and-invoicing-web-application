@@ -1,0 +1,335 @@
+// ============================================================
+// Prisma Schema — Business Management & Invoicing MVP
+// Database: PostgreSQL 17
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  CHEQUE
+  OTHER
+}
+
+enum DiscountType {
+  FLAT
+  PERCENTAGE
+}
+
+enum InventoryTransactionType {
+  SALE              // Deduction from invoice creation
+  MANUAL_ADD        // Manual restock
+  MANUAL_SUBTRACT   // Manual correction
+  SALE_REVERSAL     // Reversal when invoice is cancelled
+}
+
+// ============================================================
+// USERS
+// ============================================================
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  business              Business?
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("users")
+}
+
+// ============================================================
+// BUSINESSES
+// One user owns one business in MVP.
+// Schema designed for 1:N in future (business_id on User).
+// ============================================================
+
+model Business {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  name         String
+  addressLine1 String?  @map("address_line1")
+  addressLine2 String?  @map("address_line2")
+  city         String?
+  state        String?
+  pincode      String?
+  country      String   @default("India")
+  phone        String?
+  email        String?
+  website      String?
+  taxNumber    String?  @map("tax_number")   // GST number
+  currency     String   @default("INR")
+  // Invoice number prefix e.g. "INV" → INV-0001
+  invoicePrefix    String  @default("INV") @map("invoice_prefix")
+  invoiceCounter   Int     @default(0)     @map("invoice_counter")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user                  User                   @relation(fields: [userId], references: [id])
+  customers             Customer[]
+  categories            Category[]
+  products              Product[]
+  invoices              Invoice[]
+  payments              Payment[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@map("businesses")
+}
+
+// ============================================================
+// CUSTOMERS
+// ============================================================
+
+model Customer {
+  id           String    @id @default(uuid())
+  businessId   String    @map("business_id")
+  name         String
+  phone        String?
+  email        String?
+  addressLine1 String?   @map("address_line1")
+  addressLine2 String?   @map("address_line2")
+  city         String?
+  state        String?
+  pincode      String?
+  taxNumber    String?   @map("tax_number")   // Customer GST number
+  notes        String?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")  // Soft delete
+
+  // Relations
+  business Business  @relation(fields: [businessId], references: [id])
+  invoices Invoice[]
+
+  @@index([businessId])
+  @@index([businessId, name])
+  @@map("customers")
+}
+
+// ============================================================
+// CATEGORIES
+// ============================================================
+
+model Category {
+  id          String    @id @default(uuid())
+  businessId  String    @map("business_id")
+  name        String
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id])
+  products Product[]
+
+  @@unique([businessId, name])
+  @@index([businessId])
+  @@map("categories")
+}
+
+// ============================================================
+// PRODUCTS
+// Business Rule: Never hard-delete products.
+// deletedAt is used for soft deletion.
+// Historical invoice_items preserve product snapshot data.
+// ============================================================
+
+model Product {
+  id                 String    @id @default(uuid())
+  businessId         String    @map("business_id")
+  categoryId         String?   @map("category_id")
+  name               String
+  sku                String
+  description        String?
+  sellingPrice       Decimal   @map("selling_price")   @db.Decimal(12, 2)
+  purchasePrice      Decimal?  @map("purchase_price")  @db.Decimal(12, 2)
+  taxRate            Decimal   @default(0) @map("tax_rate") @db.Decimal(5, 2)  // Percentage e.g. 18.00
+  unit               String    @default("pcs")          // pcs, kg, ltr, box
+  stockQuantity      Int       @default(0) @map("stock_quantity")
+  lowStockThreshold  Int       @default(10) @map("low_stock_threshold")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")  // Soft delete
+
+  // Relations
+  business              Business               @relation(fields: [businessId], references: [id])
+  category              Category?              @relation(fields: [categoryId], references: [id])
+  invoiceItems          InvoiceItem[]
+  inventoryTransactions InventoryTransaction[]
+
+  // SKU must be unique per business (only among non-deleted products)
+  @@unique([businessId, sku])
+  @@index([businessId])
+  @@index([businessId, isActive])
+  @@map("products")
+}
+
+// ============================================================
+// INVOICES
+// Business Rule: totals are ALWAYS calculated by the backend.
+// The frontend may show a live preview but backend recalculates.
+// ============================================================
+
+model Invoice {
+  id             String        @id @default(uuid())
+  businessId     String        @map("business_id")
+  customerId     String        @map("customer_id")
+  invoiceNumber  String        @map("invoice_number")
+  invoiceDate    DateTime      @map("invoice_date")
+  dueDate        DateTime?     @map("due_date")
+  status         InvoiceStatus @default(ISSUED)
+  notes          String?
+
+  // Invoice-level discount (applied after subtotal)
+  discountType   DiscountType? @map("discount_type")
+  discountValue  Decimal       @default(0) @map("discount_value")  @db.Decimal(12, 2)
+
+  // Calculated totals (all computed by backend — authoritative)
+  subtotal       Decimal  @map("subtotal")        @db.Decimal(12, 2)  // Sum of line totals before invoice discount
+  discountAmount Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)  // Calculated invoice discount
+  taxAmount      Decimal  @default(0) @map("tax_amount")      @db.Decimal(12, 2)  // Sum of all line taxes
+  totalAmount    Decimal  @map("total_amount")    @db.Decimal(12, 2)  // AUTHORITATIVE FINAL TOTAL
+  amountPaid     Decimal  @default(0) @map("amount_paid")     @db.Decimal(12, 2)
+  amountDue      Decimal  @map("amount_due")      @db.Decimal(12, 2)  // Always = totalAmount - amountPaid
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  cancelledAt  DateTime? @map("cancelled_at")
+
+  // Relations
+  business Business     @relation(fields: [businessId], references: [id])
+  customer Customer     @relation(fields: [customerId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([businessId, invoiceNumber])
+  @@index([businessId])
+  @@index([customerId])
+  @@index([businessId, status])
+  @@index([businessId, invoiceDate])
+  @@map("invoices")
+}
+
+// ============================================================
+// INVOICE ITEMS
+// Business Rule: ALL fields are SNAPSHOTS at time of sale.
+// Never derive historical values from the current product record.
+// product_id is nullable to handle deleted products safely.
+// ============================================================
+
+model InvoiceItem {
+  id           String  @id @default(uuid())
+  invoiceId    String  @map("invoice_id")
+  productId    String? @map("product_id")  // Nullable — product may be soft-deleted
+
+  // ---- HISTORICAL SNAPSHOTS (immutable after creation) ----
+  productName  String  @map("product_name")   // Product name at time of sale
+  productSku   String  @map("product_sku")    // SKU at time of sale
+  unitPrice    Decimal @map("unit_price")     @db.Decimal(12, 2)  // Selling price at time of sale
+  taxRate      Decimal @map("tax_rate")       @db.Decimal(5, 2)   // Tax rate at time of sale
+  unit         String  @default("pcs")
+
+  // ---- PER-LINE INPUTS ----
+  quantity       Int
+  discountType   DiscountType? @map("discount_type")
+  discountValue  Decimal  @default(0) @map("discount_value")  @db.Decimal(12, 2)
+
+  // ---- PER-LINE CALCULATED (backend only) ----
+  discountAmount Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  taxAmount      Decimal  @default(0) @map("tax_amount")      @db.Decimal(12, 2)
+  lineTotal      Decimal  @map("line_total")    @db.Decimal(12, 2)  // (unitPrice * qty - discount) + tax
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  invoice Invoice  @relation(fields: [invoiceId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ============================================================
+// PAYMENTS
+// ============================================================
+
+model Payment {
+  id              String        @id @default(uuid())
+  invoiceId       String        @map("invoice_id")
+  businessId      String        @map("business_id")
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentDate     DateTime      @map("payment_date")
+  paymentMethod   PaymentMethod @map("payment_method")
+  referenceNumber String?       @map("reference_number")  // UPI txn ID, cheque no.
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id])
+  business Business @relation(fields: [businessId], references: [id])
+
+  @@index([invoiceId])
+  @@index([businessId])
+  @@map("payments")
+}
+
+// ============================================================
+// INVENTORY TRANSACTIONS
+// Full audit trail of every stock movement.
+// ============================================================
+
+model InventoryTransaction {
+  id              String                   @id @default(uuid())
+  businessId      String                   @map("business_id")
+  productId       String                   @map("product_id")
+  transactionType InventoryTransactionType @map("transaction_type")
+  quantityChange  Int                      @map("quantity_change")  // Positive = added, Negative = deducted
+  quantityBefore  Int                      @map("quantity_before")  // Stock snapshot before change
+  quantityAfter   Int                      @map("quantity_after")   // Stock snapshot after change
+  referenceType   String?                  @map("reference_type")   // 'INVOICE' | 'MANUAL'
+  referenceId     String?                  @map("reference_id")     // invoiceId or null
+  reason          String?                  // For manual adjustments
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  createdBy       String                   @map("created_by")
+
+  // Relations
+  business Business @relation(fields: [businessId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+  user     User     @relation(fields: [createdBy], references: [id])
+
+  @@index([productId])
+  @@index([businessId])
+  @@index([referenceId])
+  @@map("inventory_transactions")
+}
